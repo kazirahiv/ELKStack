@@ -1,0 +1,62 @@
+# filebeat.config:
+  # modules:
+    # path: ${path.config}/modules.d/*.yml
+    # reload.enabled: false
+
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+      
+# filebeat.modules:
+  # - module: postgresql
+    # log:
+      # enabled: true
+      # var.paths: ['/var/log/postgresql/*.log']
+      
+
+# processors:
+    # - add_cloud_metadata: ~
+    # - add_docker_metadata:
+      # host: "unix:///host_docker/docker.sock"
+
+filebeat.inputs:
+  - type: container
+    combine_partial: true
+    paths: 
+        - "/var/lib/docker/containers/*/*.log"
+    containers.ids:
+        - "*"
+  - type: log
+    enabled: false
+    paths:
+      - /usr/share/filebeat/mylog/*.log
+
+
+setup.dashboards.enabled: true
+
+setup.kibana:
+    host: "kibana:5601"
+
+output:
+  logstash:
+    enabled: true
+    hosts:
+      - logstash:5044
+
+# output.elasticsearch:
+  # hosts: '${ELASTICSEARCH_HOSTS:elasticsearch:9200}'
+  # username: '${ELASTICSEARCH_USERNAME:}'
+  # password: '${ELASTICSEARCH_PASSWORD:}'
+  
+# output.elasticsearch:
+  # hosts: '[elasticsearch]'
+
+# output.console:
+#   enabled: true
+#   codec.json:
+#     pretty: true
+#     escape_html: false  
+
+logging.metrics.enabled: true
+

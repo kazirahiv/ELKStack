@@ -1,0 +1,53 @@
+metricbeat.modules:
+
+#------------------------------- Redis Module -------------------------------
+- module: redis
+  enabled: true
+  metricsets: ["info", "keyspace"]
+  period: 5s
+  hosts: ["redis:6379"]
+
+#------------------------------- Nginx Module -------------------------------
+- module: nginx
+  enabled: true
+  metricsets: ["stubstatus"]
+  period: 5s
+  hosts: ["http://nginx"]
+  server_status_path: "nginx_status"
+
+
+
+- module: postgresql
+  enabled: true
+  metricsets:
+    - database
+    - bgwriter
+    - activity
+
+  period: 10s
+  hosts: ["postgres://localhost:54320"]
+
+#-------------------------- Elasticsearch output ------------------------------
+output:
+  logstash:
+    enabled: true
+    hosts:
+      - logstash:5044
+
+#============================== Dashboards =====================================
+# These settings control loading the sample dashboards to the Kibana index. Loading
+# the dashboards is disabled by default and can be enabled either by setting the
+# options here, or by using the `-setup` CLI flag.
+setup.dashboards.enabled: true
+
+setup.kibana:
+    host: "kibana:5601"
+
+logging.level: warning
+logging.to_files: true
+logging.to_syslog: false
+logging.files:
+  path: /var/log/metricbeat
+  name: metricbeat.log
+  keepfiles: 2
+  permissions: 0644

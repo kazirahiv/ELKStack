@@ -1,0 +1,25 @@
+#filebeat.config:
+#  modules:
+#    path: ${path.config}/modules.d/*.yml
+#    reload.enabled: false
+
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+
+filebeat.modules:
+  - module: postgresql
+    log:
+      enabled: true
+      var.paths: ['/var/log/postgresql/*.log']
+
+processors:
+  - add_cloud_metadata: ~
+
+setup.kibana:
+  host: "kibana:5601"
+
+setup.dashboards.enabled: true
+output.elasticsearch:
+  hosts: '[elasticsearch]'

@@ -1,0 +1,110 @@
+version: '3.5'
+
+services:
+
+  dbpostgres:
+    image: postgres
+    container_name: dbpostgres
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ./postgres/postgresql.docker.conf:/etc/postgresql/postgresql.conf
+      - ./postgres/data/:/var/lib/postgresql/data:rw
+      - pglogs:/var/log/postgresql/:rw
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    ports:
+      - "5432:5432"
+    networks:
+      - postgres-elk
+
+  filebeat:
+    user: root
+    container_name: filebeat
+    build:
+      context: filebeat/
+    command: ["--strict.perms=false" ]
+    volumes:
+      - ./filebeat/config/filebeat.docker.yml:/usr/share/filebeat/filebeat.yml
+      - pglogs:/var/log/postgresql/:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - postgres-elk
+    depends_on:
+      - postgres
+
+  metricbeat:
+    user: root
+    container_name: metricbeat
+    image: docker.elastic.co/beats/metricbeat-oss:7.13.2
+    volumes:
+      - ./metricbeat/config/metricbeat.docker.yml:/usr/share/metricbeat/metricbeat.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /proc:/hostfs/proc:ro
+      - /:/hostfs:ro
+    networks:
+      - postgres-elk
+    command: ["--strict.perms=false" ]
+    depends_on:
+      - postgres
+      
+  elasticsearch:
+    container_name: elasticsearch
+    image: elasticsearch:7.13.2
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+      - 9300:9300
+    stdin_open: true
+    tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "50"
+    networks:
+      - postgres-elk
+
+  kibana:
+    container_name: kibana
+    image: kibana:7.13.2
+    environment:
+        - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+        - ELASTICSEARCH_USERNAME=admin
+        - ELASTICSEARCH_PASSWORD=password
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 5601:5601
+    links:
+      - elasticsearch:elasticsearch
+    depends_on:
+      - elasticsearch
+    stdin_open: true
+    tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "50"
+    networks:
+      - postgres-elk
+volumes:
+  pglogs:
+    driver: local
+
+networks:
+  postgres-elk:
+    driver: bridge
